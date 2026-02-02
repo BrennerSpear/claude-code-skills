@@ -138,15 +138,40 @@ parallel-research create "Your research question" --processor ultra --wait
 - `-p, --processor` — Choose processor tier
 - `-j, --json` — Raw JSON output
 
-### 2. Check Status (if not waiting)
+### 2. Schedule Auto-Check (OpenClaw)
+
+After creating a task, set up a cron job to check results and deliver them back to the user. Use `deleteAfterRun: true` so it cleans up automatically.
+
+```json
+{
+  "action": "add",
+  "job": {
+    "name": "Check research: <topic>",
+    "schedule": {"kind": "at", "atMs": <10-15 min from now in epoch ms>},
+    "sessionTarget": "isolated",
+    "payload": {
+      "kind": "agentTurn",
+      "message": "Check research task <run_id>. Run: PARALLEL_API_KEY=<key> ~/.agents/bin/parallel-research result <run_id>. If complete, summarize key findings. If still running, reschedule another check in 10 min.",
+      "deliver": true,
+      "channel": "<source channel, e.g. telegram>",
+      "to": "<source chat/topic, e.g. -1001234567890:topic:123>"
+    },
+    "deleteAfterRun": true
+  }
+}
+```
+
+**Key points:**
+- Use the `cron` tool with `action: "add"`
+- `atMs` should be ~10-15 min from now (ultra processor) or ~5 min (fast processors)
+- `deleteAfterRun: true` removes the job after successful completion
+- Deliver back to the same channel/topic that requested the research
+- If still running, the cron job can create another check
+
+### 3. Manual Check (if needed)
 
 ```bash
 parallel-research status <run_id>
-```
-
-### 3. Get Result
-
-```bash
 parallel-research result <run_id>
 ```
 
